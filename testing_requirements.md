@@ -2,9 +2,6 @@
 
 This document outlines the comprehensive testing strategy for our Model Context Protocol (MCP)-compliant financial technology server.
 
-test
-
-dsfdf
 ## MCP-Specific Testing
 
 ### MCP Protocol Compliance Testing
