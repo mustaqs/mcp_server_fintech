@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Fintech Architecture Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .mermaid {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>MCP Fintech Platform Architecture Diagram</h1>
+    
+    <div class="mermaid">
+graph TB
+    %% Main Sections
+    subgraph "End Users"
+        Browser["Web Browser"]
+        MobileApp["Mobile App (Future)"]
+    end
+
+    subgraph "Frontend (Next.js)"
+        NextJS["Next.js Application"]
+        
+        subgraph "Frontend Components"
+            Pages["Pages (File-based Routing)"]
+            Components["Reusable Components"]
+            Hooks["Custom React Hooks"]
+            StateManagement["State Management<br>(Zustand/Redux)"]
+            APIClient["API Client<br>(React Query)"]
+            SSEClient["SSE Client<br>(EventSource)"]
+        end
+        
+        subgraph "Frontend Technologies"
+            TypeScript["TypeScript"]
+            TailwindCSS["Tailwind CSS"]
+            ReactFramework["React 18+"]
+            NextAuth["NextAuth.js"]
+            StoryBook["Storybook"]
+        end
+    end
+
+    subgraph "Backend (Python)"
+        FastAPI["FastAPI Application"]
+        
+        subgraph "MCP Server"
+            FastMCP["FastMCP Server"]
+            
+            subgraph "MCP Components"
+                Resources["MCP Resources"]
+                Tools["MCP Tools"]
+                SSETransport["SSE Transport"]
+                Notifications["Notification System"]
+            end
+            
+            subgraph "Core Modules"
+                AuthModule["Authentication Module"]
+                BankingModule["Banking Module<br>(Plaid Integration)"]
+                PaymentModule["Payment Module<br>(Stripe Integration)"]
+                InvestmentModule["Investment Module<br>(Alpaca Integration)"]
+                FraudModule["Fraud Detection Module"]
+                AdminModule["Admin Module"]
+                DeveloperModule["Developer Portal Module"]
+            end
+        end
+        
+        subgraph "Backend Technologies"
+            Python["Python 3.9+"]
+            Pydantic["Pydantic"]
+            SQLAlchemy["SQLAlchemy ORM"]
+            Alembic["Alembic Migrations"]
+            JWT["JWT Authentication"]
+            SAML["SAML/OAuth Integration"]
+        end
+    end
+
+    subgraph "Data Layer"
+        PostgreSQL["PostgreSQL Database"]
+        Redis["Redis Cache"]
+        S3["AWS S3<br>(Document Storage)"]
+    end
+
+    subgraph "Third-Party Services"
+        Plaid["Plaid API<br>(Banking)"]
+        Stripe["Stripe API<br>(Payments)"]
+        Alpaca["Alpaca API<br>(Investments)"]
+        Auth0["Auth0/Okta<br>(Optional SSO)"]
+    end
+
+    subgraph "Cloud Deployment (AWS)"
+        subgraph "Compute"
+            ECS["Amazon ECS<br>(Container Orchestration)"]
+            EC2["Amazon EC2<br>(Application Servers)"]
+            Lambda["AWS Lambda<br>(Serverless Functions)"]
+        end
+        
+        subgraph "Networking"
+            ALB["Application Load Balancer"]
+            CloudFront["CloudFront CDN"]
+            Route53["Route 53 DNS"]
+            WAF["AWS WAF<br>(Web Application Firewall)"]
+        end
+        
+        subgraph "Database Services"
+            RDS["Amazon RDS<br>(PostgreSQL)"]
+            ElastiCache["ElastiCache<br>(Redis)"]
+        end
+        
+        subgraph "Storage"
+            S3Bucket["S3 Buckets"]
+        end
+        
+        subgraph "Security"
+            IAM["IAM Roles & Policies"]
+            KMS["KMS Encryption"]
+            Secrets["Secrets Manager"]
+            SecurityGroups["Security Groups"]
+        end
+        
+        subgraph "Monitoring"
+            CloudWatch["CloudWatch"]
+            XRay["X-Ray"]
+        end
+    end
+
+    subgraph "CI/CD Pipeline"
+        subgraph "Version Control"
+            GitHub["GitHub Repository"]
+        end
+        
+        subgraph "CI/CD Tools"
+            GitHubActions["GitHub Actions"]
+            DockerBuild["Docker Build"]
+            ECR["Amazon ECR<br>(Container Registry)"]
+        end
+        
+        subgraph "Deployment Environments"
+            Dev["Development"]
+            Staging["Staging"]
+            Production["Production"]
+        end
+        
+        subgraph "Infrastructure as Code"
+            Terraform["Terraform"]
+            CloudFormation["CloudFormation"]
+        end
+    end
+
+    subgraph "Automated Testing"
+        subgraph "Testing Types"
+            UnitTests["Unit Tests"]
+            IntegrationTests["Integration Tests"]
+            E2ETests["End-to-End Tests"]
+            ContractTests["API Contract Tests"]
+            PerformanceTests["Performance Tests"]
+            SecurityTests["Security Tests"]
+        end
+        
+        subgraph "Testing Tools"
+            Pytest["Pytest"]
+            Jest["Jest"]
+            Cypress["Cypress"]
+            Postman["Postman/Newman"]
+            K6["k6 Load Testing"]
+            OWASP["OWASP ZAP"]
+            MCPInspector["MCP Inspector"]
+        end
+        
+        subgraph "Test Automation"
+            TestRunner["Test Runners"]
+            TestReporting["Test Reporting"]
+            CodeCoverage["Code Coverage"]
+        end
+    end
+
+    subgraph "Monitoring & Observability"
+        Prometheus["Prometheus"]
+        Grafana["Grafana Dashboards"]
+        ELK["ELK Stack<br>(Elasticsearch, Logstash, Kibana)"]
+        Sentry["Sentry<br>(Error Tracking)"]
+        DataDog["DataDog<br>(APM)"]
+    end
+
+    %% Connections
+    Browser --> NextJS
+    MobileApp --> FastAPI
+    
+    %% Frontend Connections
+    NextJS --> Pages
+    NextJS --> Components
+    NextJS --> Hooks
+    NextJS --> StateManagement
+    NextJS --> APIClient
+    NextJS --> SSEClient
+    
+    Pages --> TypeScript
+    Components --> TypeScript
+    Components --> TailwindCSS
+    Components --> ReactFramework
+    Components --> StoryBook
+    Hooks --> TypeScript
+    StateManagement --> TypeScript
+    APIClient --> TypeScript
+    SSEClient --> TypeScript
+    
+    APIClient --> FastAPI
+    SSEClient --> SSETransport
+    NextJS --> NextAuth
+    
+    %% Backend Connections
+    FastAPI --> FastMCP
+    FastMCP --> Resources
+    FastMCP --> Tools
+    FastMCP --> SSETransport
+    FastMCP --> Notifications
+    
+    FastMCP --> AuthModule
+    FastMCP --> BankingModule
+    FastMCP --> PaymentModule
+    FastMCP --> InvestmentModule
+    FastMCP --> FraudModule
+    FastMCP --> AdminModule
+    FastMCP --> DeveloperModule
+    
+    AuthModule --> Python
+    BankingModule --> Python
+    PaymentModule --> Python
+    InvestmentModule --> Python
+    FraudModule --> Python
+    AdminModule --> Python
+    DeveloperModule --> Python
+    
+    FastAPI --> Pydantic
+    FastAPI --> SQLAlchemy
+    SQLAlchemy --> Alembic
+    AuthModule --> JWT
+    AuthModule --> SAML
+    
+    %% Data Layer Connections
+    SQLAlchemy --> PostgreSQL
+    AuthModule --> Redis
+    FastMCP --> Redis
+    AdminModule --> S3
+    
+    %% Third-Party Service Connections
+    BankingModule --> Plaid
+    PaymentModule --> Stripe
+    InvestmentModule --> Alpaca
+    AuthModule --> Auth0
+    
+    %% Cloud Deployment Connections
+    NextJS --> CloudFront
+    FastAPI --> ALB
+    ALB --> ECS
+    ECS --> EC2
+    FraudModule --> Lambda
+    
+    CloudFront --> Route53
+    ALB --> Route53
+    CloudFront --> WAF
+    ALB --> WAF
+    
+    PostgreSQL --> RDS
+    Redis --> ElastiCache
+    S3 --> S3Bucket
+    
+    ECS --> IAM
+    Lambda --> IAM
+    RDS --> IAM
+    S3Bucket --> IAM
+    
+    FastAPI --> Secrets
+    NextJS --> Secrets
+    RDS --> KMS
+    S3Bucket --> KMS
+    Secrets --> KMS
+    
+    ECS --> SecurityGroups
+    RDS --> SecurityGroups
+    ElastiCache --> SecurityGroups
+    
+    ECS --> CloudWatch
+    Lambda --> CloudWatch
+    RDS --> CloudWatch
+    FastAPI --> XRay
+    
+    %% CI/CD Pipeline Connections
+    GitHub --> GitHubActions
+    GitHubActions --> DockerBuild
+    DockerBuild --> ECR
+    ECR --> ECS
+    
+    GitHubActions --> Dev
+    GitHubActions --> Staging
+    GitHubActions --> Production
+    
+    Dev --> Terraform
+    Staging --> Terraform
+    Production --> Terraform
+    Terraform --> CloudFormation
+    
+    %% Testing Connections
+    GitHubActions --> UnitTests
+    GitHubActions --> IntegrationTests
+    GitHubActions --> E2ETests
+    GitHubActions --> ContractTests
+    GitHubActions --> PerformanceTests
+    GitHubActions --> SecurityTests
+    
+    UnitTests --> Pytest
+    UnitTests --> Jest
+    IntegrationTests --> Pytest
+    IntegrationTests --> Jest
+    E2ETests --> Cypress
+    ContractTests --> Postman
+    PerformanceTests --> K6
+    SecurityTests --> OWASP
+    Resources --> MCPInspector
+    Tools --> MCPInspector
+    
+    Pytest --> TestRunner
+    Jest --> TestRunner
+    Cypress --> TestRunner
+    TestRunner --> TestReporting
+    TestRunner --> CodeCoverage
+    
+    %% Monitoring Connections
+    ECS --> Prometheus
+    Lambda --> Prometheus
+    RDS --> Prometheus
+    ElastiCache --> Prometheus
+    Prometheus --> Grafana
+    
+    FastAPI --> ELK
+    NextJS --> ELK
+    ECS --> ELK
+    Lambda --> ELK
+    
+    FastAPI --> Sentry
+    NextJS --> Sentry
+    
+    FastAPI --> DataDog
+    NextJS --> DataDog
+    ECS --> DataDog
+    RDS --> DataDog
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true
+            }
+        });
+    </script>
+</body>
+</html>
