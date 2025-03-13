@@ -16,7 +16,7 @@ Our implementation will follow a phased approach, with each phase building upon 
 
 - [ ] Create project repository with proper structure
 - [ ] Set up development, staging, and production environments
-- [ ] Configure CI/CD pipeline for automated testing and deployment
+- [ ] Configure CI/CD pipeline for automated testing and deployment - utilizing OIDC for AWS authentication as it's compatible with GitHub Actions.
 - [ ] Establish coding standards and documentation practices
 
 #### 1.2 Core MCP Server Implementation
@@ -33,7 +33,7 @@ Our implementation will follow a phased approach, with each phase building upon 
 - [ ] Set up PostgreSQL database
 - [ ] Configure SQLAlchemy ORM
 - [ ] Implement migration system
-- [ ] Create initial data models for users, accounts, and transactions
+- [ ] Create initial data models for users, accounts, and transactions  
 
 #### 1.4 Basic Frontend Scaffold
 
@@ -473,3 +473,7 @@ This implementation plan provides a structured approach to developing our MCP-co
 The plan is designed to be flexible, allowing for adjustments as we learn and adapt throughout the development process. Regular reviews and retrospectives will help us identify areas for improvement and ensure we stay on track to deliver a high-quality product.
 
 Our focus on MCP compliance, real-time capabilities, and security will differentiate our platform in the market, providing a solid foundation for future growth and expansion.
+
+
+## To Do
+1.  set up the corresponding IAM role in your AWS account with the appropriate trust relationship to allow GitHub Actions to assume this role. The ARN I used (arn:aws:iam::123456789012:role/github-actions-role) is a placeholder that should be replaced with my actual IAM role ARN. - corresponds to ci.yml
