@@ -73,7 +73,15 @@ class HealthResource(Resource):
             Dictionary containing health status
         """
         logger.info("Health resource accessed")
+        return self.get_health_status()
         
+    def get_health_status(self) -> Dict[str, Any]:
+        """
+        Get the current health status of all components.
+        
+        Returns:
+            Dictionary containing health status information
+        """
         # Update timestamp
         self.components["last_checked"] = self._get_timestamp()
         

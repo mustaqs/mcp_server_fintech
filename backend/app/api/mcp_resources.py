@@ -11,6 +11,21 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/mcp", tags=["mcp"])
 
+@router.get("/health")
+async def get_health():
+    """
+    Get the health status of the system.
+    """
+    server = get_mcp_server()
+    if not server:
+        raise HTTPException(status_code=503, detail="MCP server not initialized")
+    
+    health_resource = server.get_resource("system://health")
+    if not health_resource:
+        raise HTTPException(status_code=404, detail="Health resource not found")
+    
+    return health_resource.get_health_status()
+
 async def register_mcp_resources():
     """
     Register all MCP resources with the server.
