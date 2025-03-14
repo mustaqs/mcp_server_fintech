@@ -62,6 +62,18 @@ async def startup_event():
     """Initialize components on application startup."""
     logger.info("Application starting up")
     
+    # Initialize database
+    try:
+        from app.db.database import init_db
+        init_db()
+        logger.info("Database initialized successfully")
+        
+        # Set database health status to healthy
+        db_status = "healthy"
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        db_status = "unhealthy"
+    
     # Register MCP resources
     await register_mcp_resources()
     
@@ -76,8 +88,8 @@ async def startup_event():
             # Set initial health status for components
             health_resource.update_component_status("server", "healthy")
             health_resource.update_component_status("mcp_transport", "healthy")
+            health_resource.update_component_status("database", db_status)
             
-            # Database status will be updated when connection is established
             # Redis status will be updated when connection is established
             
             logger.info("Health status initialized")
