@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.mcp_server import init_mcp_server, get_mcp_server
 from app.api.mcp_resources import register_mcp_resources
+from app.api import api_router
 
 # Configure logging
 logging.basicConfig(
@@ -41,27 +42,60 @@ mcp_server = init_mcp_server(
     description="MCP-compliant financial technology platform"
 )
 
+# Include API routers
+app.include_router(api_router, prefix="")
+
+# Add a simple root endpoint
+@app.get("/")
+async def root():
+    """Root endpoint for the API."""
+    return {
+        "name": "MCP Fintech Platform",
+        "version": app.version,
+        "status": "online",
+        "docs_url": "/docs"
+    }
+
 # Register startup event
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on application startup."""
     logger.info("Application starting up")
+    
     # Register MCP resources
-    register_mcp_resources()
+    await register_mcp_resources()
+    
+    # Set initial health status
+    server = get_mcp_server()
+    if server:
+        # Get the health resource directly from our server instance
+        # since FastMCP doesn't have a get_resource_handler method
+        from app.core.resources import HealthResource
+        health_resource = server.get_resource("system://health")
+        if health_resource and isinstance(health_resource, HealthResource):
+            # Set initial health status for components
+            health_resource.update_component_status("server", "healthy")
+            health_resource.update_component_status("mcp_transport", "healthy")
+            
+            # Database status will be updated when connection is established
+            # Redis status will be updated when connection is established
+            
+            logger.info("Health status initialized")
+    
     logger.info("Application startup complete")
 
-@app.get("/")
-async def root():
-    """Root endpoint for health check."""
-    return {"status": "healthy", "service": "MCP Fintech Platform"}
-
+# Legacy health check endpoint - redirects to new API endpoint
 @app.get("/health")
-async def health_check():
-    """Health check endpoint."""
+async def legacy_health_check():
+    """Legacy health check endpoint."""
+    server = get_mcp_server()
+    if not server:
+        return {"status": "unhealthy", "message": "MCP server not initialized"}
+        
     return {
         "status": "healthy",
         "version": app.version,
-        "mcp_status": "connected"
+        "message": "Use /api/health for detailed health information"
     }
 
 @app.get("/mcp/info")

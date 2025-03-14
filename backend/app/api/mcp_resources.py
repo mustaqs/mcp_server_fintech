@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/mcp", tags=["mcp"])
 
-def register_mcp_resources():
+async def register_mcp_resources():
     """
     Register all MCP resources with the server.
     
@@ -25,7 +25,7 @@ def register_mcp_resources():
         return
     
     # Register server info resource
-    server_info = server.get_server_info()
+    server_info = await server.get_server_info()
     server.register_resource("system://info", ServerInfoResource(server_info))
     
     # Register health resource
