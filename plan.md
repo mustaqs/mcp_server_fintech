@@ -54,9 +54,17 @@ Our implementation will follow a phased approach, with each phase building upon 
 - [ ] Create API key authentication for developers
 - [ ] Set up password hashing and security
 
+✅ JWT-based authentication: Implemented in backend/app/core/auth.py with functions for generating and validating JWT tokens, including access and refresh tokens.
+✅ Role-based access control: Implemented in the User model with a roles field, and integrated with the authentication system in combined_auth.py to validate user permissions based on roles and scopes.
+✅ SAML-based Single Sign-On: Implemented in backend/app/core/sso.py and backend/app/api/sso.py with endpoints for SAML login, assertion consumer service, and metadata.
+✅ OAuth2.0/OpenID Connect: Implemented in backend/app/core/sso.py and backend/app/api/sso.py with endpoints for OAuth authorization and callback handling.
+✅ API key authentication for developers: Implemented in backend/app/db/models/api_key.py, backend/app/core/api_auth.py, and integrated with JWT authentication in combined_auth.py.
+✅ Password hashing and security: Implemented in backend/app/core/auth.py using bcrypt for secure password hashing, and in the User model for storing hashed passwords.
+
 #### 2.2 Frontend Authentication
 
 - [ ] Create login and registration pages
+- [ ] Link login and registration pages to landing page - users should be taken to registration page from landing page 
 - [ ] Implement authentication forms and validation
 - [ ] Set up JWT storage and management
 - [ ] Create protected routes
