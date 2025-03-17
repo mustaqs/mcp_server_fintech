@@ -3,6 +3,9 @@ import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from '@/contexts/ThemeProvider';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
@@ -39,11 +42,17 @@ export default function RootLayout({
         className={`${inter.variable} ${robotoMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <div className="flex min-h-screen flex-col bg-background text-foreground">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <AuthProvider>
+            <NotificationProvider>
+              <ToastProvider>
+                <div className="flex min-h-screen flex-col bg-background text-foreground">
+                  <Header />
+                  <main className="flex-1">{children}</main>
+                  <Footer />
+                </div>
+              </ToastProvider>
+            </NotificationProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
