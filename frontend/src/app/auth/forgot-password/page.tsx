@@ -14,8 +14,8 @@ export default function ForgotPasswordPage() {
     if (!email) {
       setFormError('Email is required');
       return false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setFormError('Email is invalid');
+    } else if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+      setFormError('Please enter a valid email address');
       return false;
     }
     setFormError(null);
@@ -29,8 +29,16 @@ export default function ForgotPasswordPage() {
       try {
         await resetPassword(email);
         setIsSubmitted(true);
+        // Clear any previous errors
+        setFormError(null);
+        
+        // For security reasons, always show success message even if email doesn't exist
+        // The backend should handle this silently
       } catch (err: any) {
-        setFormError(err.message || 'An error occurred while processing your request');
+        // For security reasons, we don't want to reveal if an email exists or not
+        // So we show the success message even on error, but log the error for debugging
+        console.error('Password reset error:', err);
+        setIsSubmitted(true);
       }
     }
   };
@@ -62,7 +70,7 @@ export default function ForgotPasswordPage() {
                   </h3>
                   <div className="mt-2 text-sm text-green-700 dark:text-green-300">
                     <p>
-                      If an account exists with the email {email}, you will receive a password reset link shortly.
+                      If an account exists with the email {email}, you will receive a password reset link shortly. Please check your email inbox and spam folder.
                     </p>
                   </div>
                   <div className="mt-4">

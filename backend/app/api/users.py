@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.combined_auth import get_auth_user
 from app.db.database import get_db
 from app.db.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserResponse, UserUpdate, UserPromote
 from app.services.user_service import (
     create_user,
     delete_user,
@@ -138,6 +138,49 @@ async def update_user_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
+        return updated_user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.post("/{user_id}/promote", response_model=UserResponse)
+async def promote_user(
+    user_id: uuid.UUID,
+    promotion_data: UserPromote,
+    db: Session = Depends(get_db),
+    current_user: User = Security(get_auth_user, scopes=["admin"]),
+):
+    """
+    Promote or demote a user to admin status.
+    
+    Requires admin privileges.
+    """
+    # Get the user to promote
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    # Update the user's admin status
+    user_data = UserUpdate(is_admin=promotion_data.is_admin)
+    
+    try:
+        updated_user = update_user(db, user_id, user_data)
+        
+        # Update roles based on admin status
+        if promotion_data.is_admin and "admin" not in updated_user.roles:
+            updated_user.roles.append("admin")
+        elif not promotion_data.is_admin and "admin" in updated_user.roles:
+            updated_user.roles.remove("admin")
+        
+        db.commit()
+        db.refresh(updated_user)
+        
         return updated_user
     except ValueError as e:
         raise HTTPException(

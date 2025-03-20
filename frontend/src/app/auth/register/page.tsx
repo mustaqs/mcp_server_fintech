@@ -14,7 +14,10 @@ export default function RegisterPage() {
     first_name: '',
     last_name: '',
     phone_number: '',
+    is_admin: false,
   });
+  
+  const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
   
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { register, isLoading, isAuthenticated, error } = useAuth();
@@ -25,13 +28,29 @@ export default function RegisterPage() {
     if (isAuthenticated) {
       router.push('/dashboard');
     }
+    
+    // Check if this is the first-time setup
+    const checkFirstTimeSetup = async () => {
+      try {
+        const response = await fetch('/api/auth/first-time-setup');
+        const data = await response.json();
+        setIsFirstTimeSetup(data.isFirstTimeSetup);
+      } catch (error) {
+        console.error('Error checking first-time setup:', error);
+        // If we can't connect to the backend, assume it might be first-time setup
+        // This allows the admin checkbox to appear during development
+        setIsFirstTimeSetup(true);
+      }
+    };
+    
+    checkFirstTimeSetup();
   }, [isAuthenticated, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -293,6 +312,29 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {isFirstTimeSetup && (
+              <div className="mb-4">
+                <div className="flex items-center">
+                  <input
+                    id="is_admin"
+                    name="is_admin"
+                    type="checkbox"
+                    checked={formData.is_admin}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                  />
+                  <label htmlFor="is_admin" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Register as administrator (first-time setup)
+                  </label>
+                </div>
+                {formData.is_admin && (
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    As the first user, you will have full administrative privileges.
+                  </p>
+                )}
+              </div>
+            )}
+            
             <div>
               <button
                 type="submit"

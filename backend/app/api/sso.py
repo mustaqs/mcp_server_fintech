@@ -7,13 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.core.sso import (
+# Import from the fixed SSO module
+from app.core.sso_fixed import (
     get_oauth_authorization_url,
     init_saml_auth,
     prepare_flask_request,
     process_oauth_callback,
     process_saml_response,
 )
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("saml_endpoints")
 from app.db.database import get_db
 from app.schemas.auth import Token
 
@@ -25,23 +31,33 @@ async def saml_login(request: Request):
     """
     Initiate SAML login flow.
     """
-    # Prepare request for SAML library
-    req = prepare_flask_request({
-        'scheme': request.url.scheme,
-        'host': request.url.netloc,
-        'root_path': request.scope.get('root_path', ''),
-        'port': request.url.port,
-        'query_params': dict(request.query_params),
-    })
-    
-    # Initialize SAML auth
-    auth = init_saml_auth(req)
-    
-    # Get login URL
-    login_url = auth.login()
-    
-    # Redirect to IdP
-    return RedirectResponse(url=login_url)
+    try:
+        logger.info(f"SAML login initiated from {request.client.host}")
+        
+        # Prepare request for SAML library
+        req = prepare_flask_request({
+            'scheme': request.url.scheme,
+            'host': request.url.netloc,
+            'root_path': request.scope.get('root_path', ''),
+            'port': request.url.port,
+            'query_params': dict(request.query_params),
+        })
+        
+        # Initialize SAML auth
+        auth = init_saml_auth(req)
+        
+        # Get login URL
+        login_url = auth.login()
+        logger.info(f"Redirecting to IdP: {login_url}")
+        
+        # Redirect to IdP
+        return RedirectResponse(url=login_url)
+    except Exception as e:
+        logger.error(f"Error in SAML login: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error initiating SAML login: {str(e)}",
+        )
 
 
 @router.post("/saml/acs", response_model=Token)
@@ -54,29 +70,50 @@ async def saml_assertion_consumer_service(
     
     This endpoint receives and processes SAML responses from the IdP.
     """
-    # Get form data
-    form_data = await request.form()
-    saml_response = form_data.get("SAMLResponse")
-    
-    if not saml_response:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing SAMLResponse",
+    try:
+        logger.info(f"SAML ACS request received from {request.client.host}")
+        
+        # Get form data
+        form_data = await request.form()
+        saml_response = form_data.get("SAMLResponse")
+        
+        if not saml_response:
+            logger.error("Missing SAMLResponse in form data")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing SAMLResponse",
+            )
+        
+        logger.info(f"SAMLResponse received (length: {len(saml_response)})")
+        
+        # Prepare request data
+        request_data = {
+            'scheme': request.url.scheme,
+            'host': request.url.netloc,
+            'root_path': request.scope.get('root_path', ''),
+            'port': request.url.port,
+            'form_data': dict(form_data),
+        }
+        
+        # Process SAML response
+        logger.info("Processing SAML response")
+        access_token, refresh_token = await process_saml_response(
+            db, saml_response, request_data
         )
-    
-    # Prepare request data
-    request_data = {
-        'scheme': request.url.scheme,
-        'host': request.url.netloc,
-        'root_path': request.scope.get('root_path', ''),
-        'port': request.url.port,
-        'form_data': dict(form_data),
-    }
-    
-    # Process SAML response
-    access_token, refresh_token = await process_saml_response(
-        db, saml_response, request_data
-    )
+        logger.info("SAML authentication successful")
+    except HTTPException as he:
+        # Re-raise HTTP exceptions
+        logger.error(f"HTTP error in SAML ACS: {str(he)}")
+        raise
+    except Exception as e:
+        # Handle other exceptions
+        logger.error(f"Error in SAML ACS: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing SAML response: {str(e)}",
+        )
     
     # Return HTML with tokens
     html_content = f"""

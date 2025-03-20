@@ -76,3 +76,8 @@ class UserResponse(UserBase):
         """Pydantic config."""
         orm_mode = True
         from_attributes = True
+
+
+class UserPromote(BaseModel):
+    """Schema for promoting a user to admin status."""
+    is_admin: bool = True

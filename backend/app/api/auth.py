@@ -29,6 +29,9 @@ from app.schemas.auth import (
     Token,
     TokenRefresh,
 )
+from app.schemas.user import UserCreate, UserResponse
+from app.services.user_service import create_user
+from app.services.system_service import is_first_user, mark_first_admin_created
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -244,3 +247,37 @@ async def delete_api_key(
     db.commit()
     
     return None
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register_user(
+    user_data: UserCreate,
+    db: Session = Depends(get_db),
+):
+    """
+    Register a new user account.
+    
+    This endpoint is public and does not require authentication.
+    The first user to register will be created as an admin.
+    """
+    # Check if this is the first user (first-time setup)
+    first_user = is_first_user(db)
+    
+    # Only allow admin status if this is the first user
+    if not first_user:
+        user_data.is_admin = False
+    
+    try:
+        # Create the user
+        user = create_user(db, user_data)
+        
+        # If this was the first user and they're an admin, mark first admin as created
+        if first_user and user_data.is_admin:
+            mark_first_admin_created()
+            
+        return user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )

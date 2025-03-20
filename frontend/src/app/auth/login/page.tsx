@@ -11,17 +11,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [formErrors, setFormErrors] = useState<{ email?: string; password?: string }>({});
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { login, isLoading, isAuthenticated, error } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/dashboard';
+  const registered = searchParams.get('registered');
 
   useEffect(() => {
     // If already authenticated, redirect to dashboard
     if (isAuthenticated) {
       router.push(redirectPath);
     }
-  }, [isAuthenticated, router, redirectPath]);
+    
+    // Show success message if user just registered
+    if (registered === 'true') {
+      setSuccessMessage('Registration successful! Please log in with your new account.');
+    }
+  }, [isAuthenticated, router, redirectPath, registered]);
 
   const validateForm = () => {
     const errors: { email?: string; password?: string } = {};
@@ -89,6 +96,21 @@ export default function LoginPage() {
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800 dark:text-red-200">{error}</h3>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {successMessage && (
+            <div className="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-green-800 dark:text-green-200">{successMessage}</h3>
                 </div>
               </div>
             </div>

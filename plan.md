@@ -76,6 +76,34 @@ Our implementation will follow a phased approach, with each phase building upon 
 - [ ] Create user settings pages
 - [ ] Set up password reset functionality
 - [ ] Implement multi-factor authentication
+
+Phase 1: Email-based MFA
+Implement basic MFA functionality using email for code delivery
+Complete the settings UI for enabling/disabling MFA
+Implement recovery codes
+Phase 2: Additional MFA Methods
+Add SMS-based verification
+Add authenticator app support (TOTP)
+Allow users to select preferred methods
+Phase 3: Enhanced Security Features
+Implement trusted devices
+Add IP-based suspicious login detection
+Implement account lockout after failed attempts
+Security Considerations
+Code Security: Verification codes should be:
+Randomly generated (cryptographically secure)
+Time-limited (typically 5-10 minutes)
+Single-use only
+Recovery Codes:
+Generate cryptographically secure random codes
+Store only hashed versions in the database
+Mark codes as used once redeemed
+Rate Limiting:
+Limit verification attempts to prevent brute force attacks
+Implement exponential backoff for repeated failures
+Session Management:
+Clear partial authentication state if MFA verification fails
+Implement proper timeout for partially authenticated sessions
 - [ ] Create user administration for admins
 
 #### 2.4 Testing Authentication

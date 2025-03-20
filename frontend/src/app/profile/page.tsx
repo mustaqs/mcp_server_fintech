@@ -1,18 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { updateUserProfile, uploadProfilePicture } from '@/services/userService';
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     email: user?.email || '',
     phone_number: user?.phone_number || '',
+    username: user?.username || '',
   });
+  
+  // Update form data when user data changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone_number: user.phone_number || '',
+        username: user.username || '',
+      });
+    }
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -21,12 +44,58 @@ export default function ProfilePage() {
       [name]: value,
     }));
   };
+  
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfileImage(file);
+      
+      // Create a preview URL for the image
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleImageUpload = async () => {
+    if (!profileImage) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await uploadProfilePicture(profileImage);
+      setSuccess('Profile picture updated successfully');
+      // Reset the file input
+      setProfileImage(null);
+      // Refresh the page to show the updated profile picture
+      router.replace(window.location.pathname);
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload profile picture');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would call an API to update the user profile
-    console.log('Profile update data:', formData);
-    setIsEditing(false);
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      await updateUserProfile(formData);
+      setSuccess('Profile updated successfully');
+      setIsEditing(false);
+      // Refresh the page to show the updated profile
+      router.replace(window.location.pathname);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -66,6 +135,57 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:p-6">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Profile picture upload */}
+                      <div className="col-span-6 sm:col-span-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Profile Picture
+                        </label>
+                        <div className="flex items-center space-x-6">
+                          <div className="relative h-24 w-24 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            {profileImagePreview ? (
+                              <img 
+                                src={profileImagePreview} 
+                                alt="Profile preview" 
+                                className="h-full w-full object-cover"
+                              />
+                            ) : user?.profile_image_url ? (
+                              <img 
+                                src={user.profile_image_url} 
+                                alt={`${user.first_name}'s profile`} 
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
+                                <svg className="h-12 w-12" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col space-y-2">
+                            <label className="block text-sm font-medium text-primary-600 dark:text-primary-400 cursor-pointer hover:text-primary-700 dark:hover:text-primary-300">
+                              <span>Change photo</span>
+                              <input 
+                                type="file" 
+                                className="sr-only" 
+                                accept="image/*"
+                                onChange={handleImageChange}
+                              />
+                            </label>
+                            {profileImage && (
+                              <button
+                                type="button"
+                                onClick={handleImageUpload}
+                                disabled={isLoading}
+                                className="inline-flex justify-center py-1 px-2 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50"
+                              >
+                                {isLoading ? 'Uploading...' : 'Upload'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
                       <div className="grid grid-cols-6 gap-6">
                         <div className="col-span-6 sm:col-span-3">
                           <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -78,6 +198,7 @@ export default function ProfilePage() {
                             value={formData.first_name}
                             onChange={handleChange}
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            required
                           />
                         </div>
                         <div className="col-span-6 sm:col-span-3">
@@ -91,6 +212,21 @@ export default function ProfilePage() {
                             value={formData.last_name}
                             onChange={handleChange}
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            required
+                          />
+                        </div>
+                        <div className="col-span-6 sm:col-span-4">
+                          <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Username
+                          </label>
+                          <input
+                            type="text"
+                            name="username"
+                            id="username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            required
                           />
                         </div>
                         <div className="col-span-6 sm:col-span-4">
@@ -104,6 +240,7 @@ export default function ProfilePage() {
                             value={formData.email}
                             onChange={handleChange}
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            required
                           />
                         </div>
                         <div className="col-span-6 sm:col-span-4">
@@ -130,9 +267,10 @@ export default function ProfilePage() {
                         </button>
                         <button
                           type="submit"
-                          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-primary-700 dark:hover:bg-primary-600"
+                          disabled={isLoading}
+                          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50"
                         >
-                          Save
+                          {isLoading ? 'Saving...' : 'Save'}
                         </button>
                       </div>
                     </form>

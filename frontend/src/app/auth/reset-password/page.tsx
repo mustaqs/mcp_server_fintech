@@ -24,6 +24,10 @@ export default function ResetPasswordPage() {
       // If no token is provided, redirect to forgot password page
       router.push('/auth/forgot-password');
     }
+    
+    // Check token expiration or validity
+    // This is a placeholder - in a real implementation, you might want to validate the token
+    // with a lightweight API call before allowing the user to set a new password
   }, [searchParams, router]);
 
   const validateForm = () => {
@@ -40,10 +44,16 @@ export default function ResetPasswordPage() {
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
       errors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
       isValid = false;
+    } else if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(password)) {
+      errors.password = 'Password must contain at least one special character';
+      isValid = false;
     }
 
     // Confirm password validation
-    if (password !== confirmPassword) {
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+      isValid = false;
+    } else if (password !== confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
       isValid = false;
     }
@@ -55,10 +65,20 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!token) {
+      // If token is missing, redirect to forgot password page
+      router.push('/auth/forgot-password');
+      return;
+    }
+    
     if (validateForm()) {
       try {
         await resetPasswordConfirm(token, password);
         setIsSubmitted(true);
+        
+        // Clear form data for security
+        setPassword('');
+        setConfirmPassword('');
         
         // Automatically redirect to login page after 3 seconds
         setTimeout(() => {
@@ -66,6 +86,8 @@ export default function ResetPasswordPage() {
         }, 3000);
       } catch (err) {
         // Error handling is managed by the AuthContext
+        // But we can add additional handling here if needed
+        console.error('Password reset confirmation error:', err);
       }
     }
   };
@@ -179,7 +201,7 @@ export default function ResetPasswordPage() {
 
                 <div className="text-sm">
                   <p className="text-gray-500 dark:text-gray-400">
-                    Password must be at least 8 characters and include at least one uppercase letter, one lowercase letter, and one number.
+                    Password must be at least 8 characters and include at least one uppercase letter, one lowercase letter, one number, and one special character (e.g., !@#$%^&*).
                   </p>
                 </div>
 

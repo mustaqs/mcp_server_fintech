@@ -11,9 +11,11 @@ export default function TwoFactorAuthPage() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(30);
   const [email, setEmail] = useState('');
+  const [showRecoveryCode, setShowRecoveryCode] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoading } = useAuth();
+  const { isLoading, verifyMFACode, useRecoveryCode, mfaEmail } = useAuth();
 
   // Get email from query params
   useEffect(() => {
@@ -92,14 +94,9 @@ export default function TwoFactorAuthPage() {
     setIsSubmitting(true);
     
     try {
-      // In a real implementation, this would call a method from AuthContext
-      // await verifyTwoFactorCode(email, verificationCode);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to dashboard or intended page
-      router.push('/dashboard');
+      // Use the verifyMFACode method from AuthContext
+      await verifyMFACode(verificationCode);
+      // Redirect is handled in the AuthContext
     } catch (err: any) {
       setError(err.message || 'Failed to verify code. Please try again.');
     } finally {
@@ -113,16 +110,43 @@ export default function TwoFactorAuthPage() {
     
     try {
       // In a real implementation, this would call a method from AuthContext
-      // await resendTwoFactorCode(email);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // For now, we'll just show a message
+      alert(`A new verification code has been sent to ${email || mfaEmail}`);
       
       // Reset countdown
       setCountdown(30);
     } catch (err: any) {
       setError(err.message || 'Failed to resend code. Please try again.');
     }
+  };
+  
+  // Handle recovery code submission
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!recoveryCode.trim()) {
+      setError('Please enter a recovery code');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Use the useRecoveryCode method from AuthContext
+      await useRecoveryCode(recoveryCode.trim());
+      // Redirect is handled in the AuthContext
+    } catch (err: any) {
+      setError(err.message || 'Invalid recovery code. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Toggle between verification code and recovery code
+  const toggleRecoveryCode = () => {
+    setShowRecoveryCode(!showRecoveryCode);
+    setError('');
   };
 
   return (
@@ -154,45 +178,85 @@ export default function TwoFactorAuthPage() {
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Verification Code
-              </label>
-              <div className="mt-2 flex justify-between space-x-2">
-                {code.map((digit, index) => (
+          {!showRecoveryCode ? (
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div>
+                <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Verification Code
+                </label>
+                <div className="mt-2 flex justify-between space-x-2">
+                  {code.map((digit, index) => (
+                    <input
+                      key={index}
+                      id={`code-${index}`}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleInputChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      onPaste={index === 0 ? handlePaste : undefined}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-center text-lg"
+                      required
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isLoading}
+                  className="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-primary-700 dark:hover:bg-primary-600"
+                >
+                  {isSubmitting ? (
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : null}
+                  Verify
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form className="space-y-6" onSubmit={handleRecoverySubmit}>
+              <div>
+                <label htmlFor="recoveryCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Recovery Code
+                </label>
+                <div className="mt-2">
                   <input
-                    key={index}
-                    id={`code-${index}`}
+                    id="recoveryCode"
                     type="text"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleInputChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    onPaste={index === 0 ? handlePaste : undefined}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-center text-lg"
+                    value={recoveryCode}
+                    onChange={(e) => setRecoveryCode(e.target.value)}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    placeholder="Enter your recovery code"
                     required
                   />
-                ))}
+                </div>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Enter one of your recovery codes to access your account
+                </p>
               </div>
-            </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isSubmitting || isLoading}
-                className="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-primary-700 dark:hover:bg-primary-600"
-              >
-                {isSubmitting ? (
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : null}
-                Verify
-              </button>
-            </div>
-          </form>
+              <div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isLoading}
+                  className="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-primary-700 dark:hover:bg-primary-600"
+                >
+                  {isSubmitting ? (
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : null}
+                  Verify Recovery Code
+                </button>
+              </div>
+            </form>
+          )}
 
           <div className="mt-6">
             <div className="relative">
@@ -205,13 +269,23 @@ export default function TwoFactorAuthPage() {
             </div>
 
             <div className="mt-6 flex flex-col space-y-4">
+              {!showRecoveryCode && (
+                <div className="text-sm text-center">
+                  <button
+                    onClick={handleResendCode}
+                    disabled={countdown > 0}
+                    className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
+                  </button>
+                </div>
+              )}
               <div className="text-sm text-center">
                 <button
-                  onClick={handleResendCode}
-                  disabled={countdown > 0}
-                  className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={toggleRecoveryCode}
+                  className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
                 >
-                  {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
+                  {showRecoveryCode ? 'Use verification code instead' : 'Use a recovery code instead'}
                 </button>
               </div>
               <div className="text-sm text-center">

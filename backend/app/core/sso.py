@@ -98,15 +98,33 @@ def prepare_flask_request(request_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Prepare request data for SAML library (which expects Flask-like request format).
     """
-    return {
-        'https': 'on' if request_data.get('scheme', 'http') == 'https' else 'off',
+    # Log the incoming request data for debugging
+    print(f"SAML Request Data: {request_data}")
+    
+    # Determine if HTTPS is being used
+    is_https = request_data.get('scheme', 'http') == 'https'
+    
+    # Get the server port, defaulting to standard ports if not specified
+    port = request_data.get('port')
+    if port is None:
+        port = '443' if is_https else '80'
+    
+    # Prepare the request in the format expected by OneLogin SAML library
+    flask_request = {
+        'https': 'on' if is_https else 'off',
         'http_host': request_data.get('host', ''),
         'script_name': request_data.get('root_path', ''),
-        'server_port': request_data.get('port', '443' if request_data.get('scheme') == 'https' else '80'),
+        'server_port': port,
         'get_data': request_data.get('query_params', {}),
         'post_data': request_data.get('form_data', {}),
-        'query_string': request_data.get('query_string', ''),
     }
+    
+    # Add query string if available
+    if 'query_string' in request_data:
+        flask_request['query_string'] = request_data['query_string']
+    
+    print(f"Prepared Flask Request: {flask_request}")
+    return flask_request
 
 
 async def process_saml_response(
@@ -118,69 +136,102 @@ async def process_saml_response(
     Returns:
         Tuple[str, str]: Access token and refresh token
     """
-    # Prepare request for SAML library
-    req = prepare_flask_request(request_data)
-    
-    # Initialize SAML auth
-    auth = init_saml_auth(req)
-    
-    # Process response
-    auth.process_response(saml_response)
-    
-    # Check if authenticated
-    if not auth.is_authenticated():
-        errors = auth.get_errors()
+    try:
+        # Log the SAML response (for debugging only, remove in production)
+        print(f"Received SAML Response: {saml_response[:100]}...")
+        
+        # Prepare request for SAML library
+        req = prepare_flask_request(request_data)
+        
+        # Initialize SAML auth
+        auth = init_saml_auth(req)
+        
+        # Process response - make sure form_data contains SAMLResponse
+        if 'form_data' in request_data and 'SAMLResponse' not in request_data['form_data']:
+            request_data['form_data']['SAMLResponse'] = saml_response
+        
+        # Process the SAML response
+        auth.process_response()
+        
+        # Check if authenticated
+        if not auth.is_authenticated():
+            errors = auth.get_errors()
+            reason = auth.get_last_error_reason()
+            print(f"SAML Authentication Failed - Errors: {errors}, Reason: {reason}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"SAML authentication failed: {', '.join(errors)}. Reason: {reason}",
+            )
+        # Get user attributes and log them for debugging
+        attributes = auth.get_attributes()
+        name_id = auth.get_nameid()
+        
+        print(f"SAML Attributes: {attributes}")
+        print(f"SAML NameID: {name_id}")
+        
+        if not name_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No user identifier (NameID) found in SAML response",
+            )
+            
+        # Find or create user
+        user = db.query(User).filter(User.email == name_id).first()
+        
+        if not user:
+            # Create new user
+            user = User(
+                id=uuid.uuid4(),
+                email=name_id,
+                username=name_id.split('@')[0],
+                hashed_password="",  # No password for SSO users
+                first_name=attributes.get('firstName', [None])[0],
+                last_name=attributes.get('lastName', [None])[0],
+                is_active=True,
+                is_verified=True,
+                sso_provider="saml",
+                sso_provider_user_id=name_id,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        else:
+            # Update existing user
+            user.is_active = True
+            user.is_verified = True
+            user.sso_provider = "saml"
+            user.sso_provider_user_id = name_id
+            user.last_login_at = datetime.utcnow()
+            db.commit()
+        
+        # Get user scopes
+        scopes = get_user_scopes(user)
+        
+        # Create tokens
+        access_token = create_access_token(
+            data={"sub": str(user.id), "scopes": scopes},
+        )
+        
+        refresh_token = create_refresh_token(
+            data={"sub": str(user.id), "scopes": scopes},
+        )
+        
+        print(f"SAML Authentication Successful for user: {user.email}")
+        return access_token, refresh_token
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        print(f"Error processing SAML request: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"SAML authentication failed: {', '.join(errors)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing SAML request: {str(e)}",
         )
-    
-    # Get user attributes
-    attributes = auth.get_attributes()
-    name_id = auth.get_nameid()
-    
-    # Find or create user
-    user = db.query(User).filter(User.email == name_id).first()
-    
-    if not user:
-        # Create new user
-        user = User(
-            id=uuid.uuid4(),
-            email=name_id,
-            username=name_id.split('@')[0],
-            hashed_password="",  # No password for SSO users
-            first_name=attributes.get('firstName', [None])[0],
-            last_name=attributes.get('lastName', [None])[0],
-            is_active=True,
-            is_verified=True,
-            sso_provider="saml",
-            sso_provider_user_id=name_id,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    else:
-        # Update existing user
-        user.is_active = True
-        user.is_verified = True
-        user.sso_provider = "saml"
-        user.sso_provider_user_id = name_id
-        user.last_login_at = datetime.utcnow()
-        db.commit()
-    
-    # Get user scopes
-    scopes = get_user_scopes(user)
-    
-    # Create tokens
-    access_token = create_access_token(
-        data={"sub": str(user.id), "scopes": scopes},
-    )
-    
-    refresh_token = create_refresh_token(
-        data={"sub": str(user.id), "scopes": scopes},
-    )
-    
-    return access_token, refresh_token
+    # This code is unreachable - it's now handled inside the try block
+    pass
 
 
 async def get_oauth_authorization_url(provider: str) -> str:
