@@ -117,7 +117,21 @@ Implement proper timeout for partially authenticated sessions
 ### Phase 3: Banking Integration (Weeks 5-6)
 
 #### 3.1 Plaid API Integration
-
+- [ ] Set up a generic payment abstraction layer in the backend. View the image.
+┌───────────┐
+│  Clients  │
+└─────┬─────┘
+      │ API
+┌─────▼─────────┐
+│  MCP Server   │
+│ Payment Layer │───────┐
+└───────────────┘       │
+        ┌───────────────▼───────────────┐
+        │                               │
+┌───────▼─────┐   ┌───────▼───────┐   ┌─▼─────────────┐
+│   Stripe    │   │    PayPal     │   │ Plaid & ACH   │
+└─────────────┘   └───────────────┘   └───────────────┘
+This allows quick, modular addition of new gateways without refactoring existing components.
 - [ ] Set up Plaid API client
 - [ ] Implement account linking flow
 - [ ] Create balance retrieval endpoints

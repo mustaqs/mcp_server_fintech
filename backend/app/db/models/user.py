@@ -56,7 +56,10 @@ class User(Base):
     # Relationships
     accounts = relationship("Account", back_populates="user", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
-    
+    payments = relationship("Payment", back_populates="user")
+    payment_methods = relationship("PaymentMethod", back_populates="user")
+    plaid_items = relationship("PlaidItem", back_populates="user", cascade="all, delete-orphan")
+
     def __repr__(self) -> str:
         """String representation of the user."""
         return f"<User {self.username} ({self.email})>"
